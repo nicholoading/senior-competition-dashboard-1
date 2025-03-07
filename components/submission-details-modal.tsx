@@ -69,7 +69,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
               <iframe
                 width="560"
                 height="315"
-                src={submission.details.youtubeLink}
+                src={submission.details.youtubeLink.replace("watch?v=", "embed/")}
                 title="YouTube video player"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
