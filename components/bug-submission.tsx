@@ -28,10 +28,8 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  // Base URL for Supabase Storage
   const STORAGE_BASE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
 
-  // Fetch user, team details, active grouping, and bug details
   useEffect(() => {
     const fetchData = async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
@@ -97,20 +95,19 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
         .select("description, expectedBehaviorImg, bugImageImg")
         .eq("stageId", stageId)
         .eq("bugNumber", bugNumber)
-        .eq("category", "Senior-Scratch") // Added category filter
+        .eq("category", "Junior-Scratch")
         .single();
 
       if (bugError || !bugData) {
-        console.warn("Bug not found or not in Senior-Scratch category:", bugError?.message);
+        console.warn("Bug not found or not in Junior-Scratch category:", bugError?.message);
         toast({
           title: "Error",
-          description: "Bug not found or does not belong to Senior-Scratch category.",
+          description: "Bug not found or does not belong to Junior-Scratch category.",
           variant: "destructive",
         });
         return;
       }
 
-      // Prepend base URL to image paths
       setBugDetails({
         description: bugData.description,
         expectedBehaviorImg: `${STORAGE_BASE_URL}${bugData.expectedBehaviorImg}`,
@@ -121,7 +118,6 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
     fetchData();
   }, [bugNumber, toast]);
 
-  // Reset form after submission
   const resetForm = () => {
     setScreenshots([]);
     setMethod("");
@@ -129,18 +125,15 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
     if (formRef.current) formRef.current.reset();
   };
 
-  // Handle screenshot selection
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setScreenshots((prevScreenshots) => [...prevScreenshots, ...files]);
   };
 
-  // Remove selected screenshot
   const removeScreenshot = (index: number) => {
     setScreenshots((prevScreenshots) => prevScreenshots.filter((_, i) => i !== index));
   };
 
-  // Upload screenshots to Supabase Storage
   const uploadScreenshots = async () => {
     if (!teamDetails) return null;
     const uploadedUrls: string[] = [];
@@ -165,10 +158,50 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
     return uploadedUrls;
   };
 
-  // Submit bug fix to Supabase
+  const checkGroupingStatus = async () => {
+    if (!teamDetails) return false;
+
+    const { data: teamGroupings, error: groupingError } = await supabase
+      .from("teamGroupings")
+      .select("grouping")
+      .eq("teamName", teamDetails.teamName);
+
+    if (groupingError || !teamGroupings || teamGroupings.length === 0) {
+      console.warn("No groupings found for team:", groupingError?.message);
+      return false;
+    }
+
+    const groupingNames = teamGroupings.map((g) => g.grouping);
+    const { data: activeGroupings, error: statusError } = await supabase
+      .from("groupingStatus")
+      .select("grouping")
+      .in("grouping", groupingNames)
+      .eq("status", "active");
+
+    if (statusError || !activeGroupings || activeGroupings.length === 0) {
+      console.warn("No active groupings found:", statusError?.message);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    const isGroupingActive = await checkGroupingStatus();
+    if (!isGroupingActive) {
+      toast({
+        title: "Submission Blocked",
+        description: "The grouping is no longer active. Reloading the page...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      return;
+    }
 
     if (!teamDetails) {
       toast({

@@ -113,7 +113,7 @@ const Page = () => {
           ></iframe>
         ) : (
           <div className="flex items-center justify-center h-[600px]">
-            <p>No mission pack available for the current stage in Senior-HTML category.</p>
+            <p>No mission pack available for the current stage in Senior-Scratch category.</p>
           </div>
         )}
       </div>

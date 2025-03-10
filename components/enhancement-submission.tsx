@@ -22,10 +22,9 @@ import { Icons } from "@/components/ui/icons";
 type EnhancementType = "advanced" | "basic";
 
 export function EnhancementSubmission() {
-  const [enhancementType, setEnhancementType] =
-    useState<EnhancementType>("basic");
+  const [enhancementType, setEnhancementType] = useState<EnhancementType>("basic");
   const [screenshots, setScreenshots] = useState<File[]>([]);
-  const [activeGrouping, setActiveGrouping] = useState<string | null>(null); // State for active grouping
+  const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [justification, setJustification] = useState("");
@@ -38,7 +37,6 @@ export function EnhancementSubmission() {
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  // Fetch user, team details, and active grouping
   useEffect(() => {
     const fetchUserDataAndGrouping = async () => {
       const { data: user, error } = await supabase.auth.getUser();
@@ -51,7 +49,6 @@ export function EnhancementSubmission() {
       if (teamData) {
         setTeamDetails(teamData);
 
-        // Step 1: Fetch team's groupings from teamGroupings
         const { data: teamGroupings, error: groupingError } = await supabase
           .from("teamGroupings")
           .select("grouping")
@@ -62,7 +59,6 @@ export function EnhancementSubmission() {
           return;
         }
 
-        // Step 2: Check which (if any) of these groupings are active in groupingStatus
         const groupingNames = teamGroupings.map((g) => g.grouping);
         const { data: activeGroupings, error: statusError } = await supabase
           .from("groupingStatus")
@@ -75,7 +71,6 @@ export function EnhancementSubmission() {
           return;
         }
 
-        // Step 3: Take the first active grouping
         const activeGroup = activeGroupings[0]?.grouping || null;
         setActiveGrouping(activeGroup);
       }
@@ -84,7 +79,6 @@ export function EnhancementSubmission() {
     fetchUserDataAndGrouping();
   }, []);
 
-  // Reset form after submission
   const resetForm = () => {
     setEnhancementType("basic");
     setScreenshots([]);
@@ -94,28 +88,21 @@ export function EnhancementSubmission() {
     if (formRef.current) formRef.current.reset();
   };
 
-  // Handle screenshot selection
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setScreenshots((prevScreenshots) => [...prevScreenshots, ...files]);
   };
 
-  // Remove selected screenshot
   const removeScreenshot = (index: number) => {
-    setScreenshots((prevScreenshots) =>
-      prevScreenshots.filter((_, i) => i !== index)
-    );
+    setScreenshots((prevScreenshots) => prevScreenshots.filter((_, i) => i !== index));
   };
 
-  // Upload screenshots to Supabase Storage
   const uploadScreenshots = async () => {
     if (!teamDetails) return null;
     const uploadedUrls: string[] = [];
 
     for (const file of screenshots) {
-      const filePath = `enhancements/${teamDetails.teamId}/${Date.now()}-${
-        file.name
-      }`;
+      const filePath = `enhancements/${teamDetails.teamId}/${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
         .from("enhancementScreenshots")
         .upload(filePath, file);
@@ -136,10 +123,50 @@ export function EnhancementSubmission() {
     return uploadedUrls;
   };
 
-  // Submit enhancement to Supabase
+  const checkGroupingStatus = async () => {
+    if (!teamDetails) return false;
+
+    const { data: teamGroupings, error: groupingError } = await supabase
+      .from("teamGroupings")
+      .select("grouping")
+      .eq("teamName", teamDetails.teamName);
+
+    if (groupingError || !teamGroupings || teamGroupings.length === 0) {
+      console.warn("No groupings found for team:", groupingError?.message);
+      return false;
+    }
+
+    const groupingNames = teamGroupings.map((g) => g.grouping);
+    const { data: activeGroupings, error: statusError } = await supabase
+      .from("groupingStatus")
+      .select("grouping")
+      .in("grouping", groupingNames)
+      .eq("status", "active");
+
+    if (statusError || !activeGroupings || activeGroupings.length === 0) {
+      console.warn("No active groupings found:", statusError?.message);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    const isGroupingActive = await checkGroupingStatus();
+    if (!isGroupingActive) {
+      toast({
+        title: "Submission Blocked",
+        description: "The grouping is no longer active. Reloading the page...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      return;
+    }
 
     if (!teamDetails) {
       toast({
@@ -164,8 +191,8 @@ export function EnhancementSubmission() {
           enhancementType,
           screenshots: screenshotUrls,
           description,
-          justification:  justification,
-          stage: activeGrouping, // Set stage to active grouping or null
+          justification,
+          stage: activeGrouping,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -194,9 +221,7 @@ export function EnhancementSubmission() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">
-          Submit Enhancement
-        </CardTitle>
+        <CardTitle className="text-xl font-semibold">Submit Enhancement</CardTitle>
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -228,10 +253,7 @@ export function EnhancementSubmission() {
                 <p className="text-sm text-gray-500">Selected files:</p>
                 <ul className="list-disc pl-5">
                   {screenshots.map((file, index) => (
-                    <li
-                      key={index}
-                      className="text-sm flex items-center justify-between"
-                    >
+                    <li key={index} className="text-sm flex items-center justify-between">
                       <span>{file.name}</span>
                       <Button
                         type="button"
@@ -258,7 +280,6 @@ export function EnhancementSubmission() {
               required
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="justification">Justification</Label>
             <Textarea
@@ -269,13 +290,8 @@ export function EnhancementSubmission() {
               required
             />
           </div>
-
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              "Submit Enhancement"
-            )}
+            {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Enhancement"}
           </Button>
         </form>
       </CardContent>

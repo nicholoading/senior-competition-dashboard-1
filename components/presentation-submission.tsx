@@ -13,13 +13,12 @@ import { Icons } from "@/components/ui/icons";
 
 export function PresentationSubmission() {
   const [youtubeLink, setYoutubeLink] = useState("");
-  const [activeGrouping, setActiveGrouping] = useState<string | null>(null); // State for active grouping
+  const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [teamDetails, setTeamDetails] = useState<{ teamId: string; teamName: string; authorName: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  // Fetch user, team details, and active grouping
   useEffect(() => {
     const fetchUserDataAndGrouping = async () => {
       const { data: user, error } = await supabase.auth.getUser();
@@ -32,7 +31,6 @@ export function PresentationSubmission() {
       if (teamData) {
         setTeamDetails(teamData);
 
-        // Step 1: Fetch team's groupings from teamGroupings
         const { data: teamGroupings, error: groupingError } = await supabase
           .from("teamGroupings")
           .select("grouping")
@@ -43,7 +41,6 @@ export function PresentationSubmission() {
           return;
         }
 
-        // Step 2: Check which (if any) of these groupings are active in groupingStatus
         const groupingNames = teamGroupings.map((g) => g.grouping);
         const { data: activeGroupings, error: statusError } = await supabase
           .from("groupingStatus")
@@ -56,7 +53,6 @@ export function PresentationSubmission() {
           return;
         }
 
-        // Step 3: Take the first active grouping
         const activeGroup = activeGroupings[0]?.grouping || null;
         setActiveGrouping(activeGroup);
       }
@@ -65,16 +61,55 @@ export function PresentationSubmission() {
     fetchUserDataAndGrouping();
   }, []);
 
-  // Reset form after submission
   const resetForm = () => {
     setYoutubeLink("");
     if (formRef.current) formRef.current.reset();
   };
 
-  // Submit presentation to Supabase
+  const checkGroupingStatus = async () => {
+    if (!teamDetails) return false;
+
+    const { data: teamGroupings, error: groupingError } = await supabase
+      .from("teamGroupings")
+      .select("grouping")
+      .eq("teamName", teamDetails.teamName);
+
+    if (groupingError || !teamGroupings || teamGroupings.length === 0) {
+      console.warn("No groupings found for team:", groupingError?.message);
+      return false;
+    }
+
+    const groupingNames = teamGroupings.map((g) => g.grouping);
+    const { data: activeGroupings, error: statusError } = await supabase
+      .from("groupingStatus")
+      .select("grouping")
+      .in("grouping", groupingNames)
+      .eq("status", "active");
+
+    if (statusError || !activeGroupings || activeGroupings.length === 0) {
+      console.warn("No active groupings found:", statusError?.message);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    const isGroupingActive = await checkGroupingStatus();
+    if (!isGroupingActive) {
+      toast({
+        title: "Submission Blocked",
+        description: "The grouping is no longer active. Reloading the page...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      return;
+    }
 
     if (!teamDetails) {
       toast({
@@ -92,7 +127,7 @@ export function PresentationSubmission() {
           teamId: teamDetails.teamId,
           authorName: teamDetails.authorName,
           youtubeLink,
-          stage: activeGrouping, // Set stage to active grouping or null
+          stage: activeGrouping,
           createdAt: new Date().toISOString(),
         },
       ]);
