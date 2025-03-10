@@ -134,7 +134,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Nothing to see here
               </h1>
               <Link
-                href={"https://competition-dashboard-1.vercel.app/previous-history"}
+                href={"https://seniorscratch.bugcrusher.net/previous-history"}
                 className="text-blue-600 underline text-center text-sm hover:text-blue-800 transition-colors"
               >
                 See your history here
