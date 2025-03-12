@@ -9,7 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "Bug Crusher Dashboard",
   description: "Competition dashboard for bug crushers",
-  generator: "v0.dev",
+  icons: {
+    icon: '/favicon.ico'
+  }
 };
 
 export default function RootLayout({
