@@ -95,11 +95,11 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
         .select("description, expectedBehaviorImg, bugImageImg")
         .eq("stageId", stageId)
         .eq("bugNumber", bugNumber)
-        .eq("category", "Junior-Scratch")
+        .eq("category", "Senior-Scratch")
         .single();
 
       if (bugError || !bugData) {
-        console.warn("Bug not found or not in Junior-Scratch category:", bugError?.message);
+        console.warn("Bug not found or not in Senior-Scratch category:", bugError?.message);
         toast({
           title: "Error",
           description: "Bug not found or does not belong to Junior-Scratch category.",
