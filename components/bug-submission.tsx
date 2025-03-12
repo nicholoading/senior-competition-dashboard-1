@@ -102,7 +102,7 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
         console.warn("Bug not found or not in Senior-Scratch category:", bugError?.message);
         toast({
           title: "Error",
-          description: "Bug not found or does not belong to Junior-Scratch category.",
+          description: "Bug not found or does not belong to Senior-Scratch category.",
           variant: "destructive",
         });
         return;
