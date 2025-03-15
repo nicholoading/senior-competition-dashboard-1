@@ -19,7 +19,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
         </DialogHeader>
         <div className="mt-4 space-y-4">
           <p><strong>Submitted By:</strong> {submission.submittedBy}</p>
-          <p><strong>Submission Date:</strong> {new Date(submission.submissionDate).toLocaleString()}</p>
+          <p><strong>Submission Date:</strong> {submission.submissionDate}</p>
 
           {/* Display Bug Number */}
           {submission.type === "Bug" && (
