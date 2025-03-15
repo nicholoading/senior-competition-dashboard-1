@@ -10,6 +10,40 @@ type SubmissionDetailsModalProps = {
 export function SubmissionDetailsModal({ isOpen, onClose, submission }: SubmissionDetailsModalProps) {
   if (!submission) return null;
 
+  function getYouTubeEmbedUrl(url: string) {
+    try {
+      // Handle different YouTube URL formats
+      const urlObj = new URL(url);
+      let videoId = '';
+  
+      // Handle youtu.be links
+      if (urlObj.hostname === 'youtu.be') {
+        videoId = urlObj.pathname.slice(1);
+      }
+      // Handle youtube.com/watch links
+      else if (urlObj.hostname.includes('youtube.com')) {
+        if (urlObj.pathname.includes('/watch')) {
+          videoId = urlObj.searchParams.get('v');
+        }
+        // Handle youtube.com/live links
+        else if (urlObj.pathname.includes('/live')) {
+          videoId = urlObj.pathname.split('/live/')[1];
+        }
+      }
+  
+      // Return embed URL if we found a video ID
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+      
+      // Fallback to original URL if parsing fails
+      return url.replace("watch?v=", "embed/");
+    } catch (error) {
+      // If URL parsing fails completely, try basic replacement
+      return url.replace("watch?v=", "embed/");
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto"> {/* Scrollable content */}
@@ -69,7 +103,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
               <iframe
                 width="560"
                 height="315"
-                src={submission.details.youtubeLink.replace("watch?v=", "embed/")}
+                src={getYouTubeEmbedUrl(submission.details.youtubeLink)}                
                 title="YouTube video player"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
