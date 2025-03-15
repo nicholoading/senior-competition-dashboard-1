@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-const COUNTDOWN_DURATION = 2 * 60 * 60 * 1000; // 3 hours in milliseconds
+const COUNTDOWN_DURATION = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
 const calculateTimeLeft = (endTime: number) => {
   const difference = endTime - Date.now();
