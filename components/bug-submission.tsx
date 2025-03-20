@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Icons } from "@/components/ui/icons";
@@ -19,30 +25,44 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
   const [bugDetails, setBugDetails] = useState<{
     description: string;
-    expectedBehaviorImg: string;
-    bugImageImg: string;
+    expectedDescription: string; // Added new field
+    expectedBehaviorImg: string[]; // Now an array
+    bugImageImg: string[]; // Now an array
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [teamDetails, setTeamDetails] = useState<{ teamId: string; teamName: string; authorName: string } | null>(null);
+  const [teamDetails, setTeamDetails] = useState<{
+    teamId: string;
+    teamName: string;
+    authorName: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
   const STORAGE_BASE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
 
+  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user?.user?.email) {
         console.warn("⚠️ No authenticated user found.");
-        toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "User not authenticated.",
+          variant: "destructive",
+        });
         return;
       }
 
       const teamData = await getUserTeamDetails(user.user.email);
       if (!teamData) {
         console.warn("No team data found.");
-        toast({ title: "Error", description: "Team data not found.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Team data not found.",
+          variant: "destructive",
+        });
         return;
       }
       setTeamDetails(teamData);
@@ -54,7 +74,11 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
       if (groupingError || !teamGroupings || teamGroupings.length === 0) {
         console.warn("No groupings found for team:", groupingError?.message);
-        toast({ title: "Error", description: "No groupings found for team.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "No groupings found for team.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -67,7 +91,11 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
       if (statusError || !activeGroupings || activeGroupings.length === 0) {
         console.warn("No active groupings found:", statusError?.message);
-        toast({ title: "Error", description: "No active grouping found.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "No active grouping found.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -83,8 +111,16 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
         .single();
 
       if (stageError || !stageData) {
-        console.warn("Stage not found for grouping:", activeGroup, stageError?.message);
-        toast({ title: "Error", description: "Stage not found.", variant: "destructive" });
+        console.warn(
+          "Stage not found for grouping:",
+          activeGroup,
+          stageError?.message
+        );
+        toast({
+          title: "Error",
+          description: "Stage not found.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -92,26 +128,34 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
       const { data: bugData, error: bugError } = await supabase
         .from("bugs")
-        .select("description, expectedBehaviorImg, bugImageImg")
+        .select("description, expectedDescription, expectedBehaviorImg, bugImageImg") // Added expectedDescription
         .eq("stageId", stageId)
         .eq("bugNumber", bugNumber)
-        .eq("category", "Senior-Scratch")
+        .eq("category", "Senior-HTML")
         .single();
 
       if (bugError || !bugData) {
-        console.warn("Bug not found or not in Senior-Scratch category:", bugError?.message);
+        console.warn(
+          "Bug not found or not in Senior-Scratch category:",
+          bugError?.message
+        );
         toast({
           title: "Error",
-          description: "Bug not found or does not belong to Senior-Scratch category.",
+          description:
+            "Bug not found or does not belong to Senior-Scratch category.",
           variant: "destructive",
         });
         return;
       }
 
+      // Assuming bugImageImg and expectedBehaviorImg are stored as arrays in Supabase
       setBugDetails({
         description: bugData.description,
-        expectedBehaviorImg: `${STORAGE_BASE_URL}${bugData.expectedBehaviorImg}`,
-        bugImageImg: `${STORAGE_BASE_URL}${bugData.bugImageImg}`,
+        expectedDescription: bugData.expectedDescription, // New field
+        expectedBehaviorImg: bugData.expectedBehaviorImg.map(
+          (path: string) => `${STORAGE_BASE_URL}${path}`
+        ),
+        bugImageImg: bugData.bugImageImg.map((path: string) => `${STORAGE_BASE_URL}${path}`),
       });
     };
 
@@ -131,7 +175,9 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
   };
 
   const removeScreenshot = (index: number) => {
-    setScreenshots((prevScreenshots) => prevScreenshots.filter((_, i) => i !== index));
+    setScreenshots((prevScreenshots) =>
+      prevScreenshots.filter((_, i) => i !== index)
+    );
   };
 
   const uploadScreenshots = async () => {
@@ -140,7 +186,9 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
     for (const file of screenshots) {
       const filePath = `bugs/${teamDetails.teamId}/${bugNumber}/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage.from("bugScreenshots").upload(filePath, file);
+      const { data, error } = await supabase.storage
+        .from("bugScreenshots")
+        .upload(filePath, file);
 
       if (error) {
         toast({
@@ -183,7 +231,7 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
       return false;
     }
 
-    return true;
+    return true; // Grouping is active
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -256,32 +304,61 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
     <div className="grid md:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Bug #{bugNumber} Description</CardTitle>
-          <CardDescription>Review the bug details before submitting your fix</CardDescription>
+          <CardTitle className="text-xl font-semibold">
+            Bug #{bugNumber} Description
+          </CardTitle>
+          <CardDescription>
+            Review the bug details before submitting your fix
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {bugDetails ? (
             <div className="space-y-4">
-              <p>{bugDetails.description}</p>
-              <div className="space-y-2">
-                <p className="font-medium">Bug Screenshot:</p>
-                <Image
-                  src={bugDetails.bugImageImg}
-                  alt={`Bug ${bugNumber} screenshot`}
-                  width={400}
-                  height={300}
-                  className="rounded-md"
-                />
+              <div>
+                {bugDetails.description
+                  .replace(/\\n/g, "\n")
+                  .split("\n")
+                  .map((line, index) => (
+                    <p key={index} className="mb-2">
+                      {line}
+                    </p>
+                  ))}
               </div>
               <div className="space-y-2">
+                <p className="font-medium">Bug Screenshot(s):</p>
+                {bugDetails.bugImageImg.map((imgSrc, index) => (
+                  <Image
+                    key={index}
+                    src={imgSrc}
+                    alt={`Bug ${bugNumber} screenshot ${index + 1}`}
+                    width={400}
+                    height={300}
+                    className="rounded-md"
+                  />
+                ))}
+              </div>
+              <div className="space-y-2">
+                <div>
+                  {bugDetails.expectedDescription
+                    .replace(/\\n/g, "\n")
+                    .split("\n")
+                    .map((line, index) => (
+                      <p key={index} className="mb-2">
+                        {line}
+                      </p>
+                    ))}
+                </div>
                 <p className="font-medium">Expected Behavior:</p>
-                <Image
-                  src={bugDetails.expectedBehaviorImg}
-                  alt="Expected behavior screenshot"
-                  width={400}
-                  height={300}
-                  className="rounded-md"
-                />
+                {bugDetails.expectedBehaviorImg.map((imgSrc, index) => (
+                  <Image
+                    key={index}
+                    src={imgSrc}
+                    alt={`Expected behavior screenshot ${index + 1}`}
+                    width={400}
+                    height={300}
+                    className="rounded-md"
+                  />
+                ))}
               </div>
             </div>
           ) : (
@@ -292,8 +369,12 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Submit Your Fix</CardTitle>
-          <CardDescription>Upload your code and describe your method</CardDescription>
+          <CardTitle className="text-xl font-semibold">
+            Submit Your Fix
+          </CardTitle>
+          <CardDescription>
+            Upload your code and describe your method
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -313,7 +394,10 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
                   <p className="text-sm text-gray-500">Selected files:</p>
                   <ul className="list-disc pl-5">
                     {screenshots.map((file, index) => (
-                      <li key={index} className="text-sm flex items-center justify-between">
+                      <li
+                        key={index}
+                        className="text-sm flex items-center justify-between"
+                      >
                         <span>{file.name}</span>
                         <Button
                           type="button"
@@ -341,7 +425,11 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Fix"}
+              {isLoading ? (
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Submit Fix"
+              )}
             </Button>
           </form>
         </CardContent>
