@@ -14,6 +14,7 @@ import { Icons } from "@/components/ui/icons";
 export function PresentationSubmission() {
   const [youtubeLink, setYoutubeLink] = useState("");
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
+  const [isPresentation, setIsPresentation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [teamDetails, setTeamDetails] = useState<{ teamId: string; teamName: string; authorName: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -44,7 +45,7 @@ export function PresentationSubmission() {
         const groupingNames = teamGroupings.map((g) => g.grouping);
         const { data: activeGroupings, error: statusError } = await supabase
           .from("groupingStatus")
-          .select("grouping")
+          .select("grouping, isPresentation")
           .in("grouping", groupingNames)
           .eq("status", "active");
 
@@ -55,6 +56,7 @@ export function PresentationSubmission() {
 
         const activeGroup = activeGroupings[0]?.grouping || null;
         setActiveGrouping(activeGroup);
+        setIsPresentation(activeGroupings[0]?.isPresentation || false);
       }
     };
 
@@ -129,6 +131,7 @@ export function PresentationSubmission() {
           youtubeLink,
           stage: activeGrouping,
           createdAt: new Date().toISOString(),
+          penalty: isPresentation, // Set penalty based on isPresentation
         },
       ]);
 
@@ -171,9 +174,16 @@ export function PresentationSubmission() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || !youtubeLink}>
-            {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Presentation"}
-          </Button>
+          <div>
+            <Button type="submit" className="w-full" disabled={isLoading || !youtubeLink}>
+              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Presentation"}
+            </Button>
+            {isPresentation && (
+              <p className="text-sm text-yellow-600 mt-2">
+                You are still able to submit presentation, but there will be a penalty.
+              </p>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

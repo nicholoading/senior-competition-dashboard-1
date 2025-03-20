@@ -14,6 +14,7 @@ import { Icons } from "@/components/ui/icons";
 export function ProjectSubmission() {
   const [scratchFile, setScratchFile] = useState<File | null>(null);
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
+  const [is4Submission, setIs4Submission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [teamDetails, setTeamDetails] = useState<{ teamId: string; teamName: string; authorName: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +35,6 @@ export function ProjectSubmission() {
         });
         return;
       }
-      console.log("Authenticated user:", user.user.email, "JWT:", user.user.aud);
 
       const teamData = await getUserTeamDetails(user.user.email);
       if (!teamData) {
@@ -46,7 +46,6 @@ export function ProjectSubmission() {
         });
         return;
       }
-      console.log("Team details:", teamData);
       setTeamDetails(teamData);
 
       const { data: teamGroupings, error: groupingError } = await supabase
@@ -67,7 +66,7 @@ export function ProjectSubmission() {
       const groupingNames = teamGroupings.map((g) => g.grouping);
       const { data: activeGroupings, error: statusError } = await supabase
         .from("groupingStatus")
-        .select("grouping")
+        .select("grouping, is4Submission")
         .in("grouping", groupingNames)
         .eq("status", "active");
 
@@ -82,8 +81,8 @@ export function ProjectSubmission() {
       }
 
       const activeGroup = activeGroupings[0]?.grouping || null;
-      console.log("Active grouping:", activeGroup);
       setActiveGrouping(activeGroup);
+      setIs4Submission(activeGroupings[0]?.is4Submission || false);
     };
 
     fetchUserDataAndGrouping();
@@ -116,7 +115,6 @@ export function ProjectSubmission() {
     }
 
     const filePath = `${teamDetails.teamId}/${scratchFile.name}`;
-    console.log("Uploading file to:", `scratch-files/${filePath}`);
     const { data, error } = await supabase.storage
       .from("scratch-files")
       .upload(filePath, scratchFile, {
@@ -134,7 +132,6 @@ export function ProjectSubmission() {
     }
 
     const publicUrl = `${STORAGE_BASE_URL}scratch-files/${filePath}`;
-    console.log("File uploaded, public URL:", publicUrl);
     return publicUrl;
   };
 
@@ -209,30 +206,21 @@ export function ProjectSubmission() {
         throw new Error("File upload failed.");
       }
 
-      console.log("Inserting into projects table:", {
-        teamId: teamDetails.teamId,
-        authorName: teamDetails.authorName,
-        projectLink,
-        stage: activeGrouping,
-        createdAt: new Date().toISOString(),
-      });
-
-      const { data, error } = await supabase.from("projects").insert([
+      const { error } = await supabase.from("projects").insert([
         {
           teamId: teamDetails.teamId,
           authorName: teamDetails.authorName,
           projectLink,
           stage: activeGrouping,
           createdAt: new Date().toISOString(),
+          penalty: is4Submission, // Set penalty based on is4Submission
         },
       ]);
 
       if (error) {
-        console.error("Database insert error:", error);
         throw error;
       }
 
-      console.log("Insert successful:", data);
       toast({
         title: "Project Submitted",
         description: "Your Scratch project has been submitted successfully.",
@@ -240,7 +228,6 @@ export function ProjectSubmission() {
 
       resetForm();
     } catch (error: any) {
-      console.error("Submission error:", error);
       toast({
         title: "Submission Failed",
         description: error.message || "An error occurred.",
@@ -272,9 +259,16 @@ export function ProjectSubmission() {
               <p className="text-sm text-gray-500">Selected file: {scratchFile.name}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || !scratchFile}>
-            {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Project"}
-          </Button>
+          <div>
+            <Button type="submit" className="w-full" disabled={isLoading || !scratchFile}>
+              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Project"}
+            </Button>
+            {is4Submission && (
+              <p className="text-sm text-yellow-600 mt-2">
+                You are still able to submit project, but there will be a penalty.
+              </p>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

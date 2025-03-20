@@ -9,13 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Icons } from "@/components/ui/icons";
 
@@ -25,6 +19,7 @@ export function EnhancementSubmission() {
   const [enhancementType, setEnhancementType] = useState<EnhancementType>("basic");
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
+  const [is4Submission, setIs4Submission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [justification, setJustification] = useState("");
@@ -62,7 +57,7 @@ export function EnhancementSubmission() {
         const groupingNames = teamGroupings.map((g) => g.grouping);
         const { data: activeGroupings, error: statusError } = await supabase
           .from("groupingStatus")
-          .select("grouping")
+          .select("grouping, is4Submission")
           .in("grouping", groupingNames)
           .eq("status", "active");
 
@@ -73,6 +68,7 @@ export function EnhancementSubmission() {
 
         const activeGroup = activeGroupings[0]?.grouping || null;
         setActiveGrouping(activeGroup);
+        setIs4Submission(activeGroupings[0]?.is4Submission || false);
       }
     };
 
@@ -194,6 +190,7 @@ export function EnhancementSubmission() {
           justification,
           stage: activeGrouping,
           createdAt: new Date().toISOString(),
+          penalty: is4Submission, // Set penalty based on is4Submission
         },
       ]);
 
@@ -290,9 +287,16 @@ export function EnhancementSubmission() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Enhancement"}
-          </Button>
+          <div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Enhancement"}
+            </Button>
+            {is4Submission && (
+              <p className="text-sm text-yellow-600 mt-2">
+                You are still able to submit enhancement, but there will be a penalty.
+              </p>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

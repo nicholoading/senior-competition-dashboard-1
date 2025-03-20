@@ -14,6 +14,7 @@ import { Icons } from "@/components/ui/icons";
 export function BrainstormSubmission() {
   const [file, setFile] = useState<File | null>(null);
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
+  const [is4Submission, setIs4Submission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [teamDetails, setTeamDetails] = useState<{ teamId: string; teamName: string; authorName: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +46,7 @@ export function BrainstormSubmission() {
         const groupingNames = teamGroupings.map((g) => g.grouping);
         const { data: activeGroupings, error: statusError } = await supabase
           .from("groupingStatus")
-          .select("grouping")
+          .select("grouping, is4Submission")
           .in("grouping", groupingNames)
           .eq("status", "active");
 
@@ -56,6 +57,7 @@ export function BrainstormSubmission() {
 
         const activeGroup = activeGroupings[0]?.grouping || null;
         setActiveGrouping(activeGroup);
+        setIs4Submission(activeGroupings[0]?.is4Submission || false);
       }
     };
 
@@ -159,6 +161,7 @@ export function BrainstormSubmission() {
           fileUrl,
           stage: activeGrouping,
           createdAt: new Date().toISOString(),
+          penalty: is4Submission, // Set penalty based on is4Submission
         },
       ]);
 
@@ -202,9 +205,16 @@ export function BrainstormSubmission() {
             />
             {file && <p className="text-sm text-gray-500">Selected file: {file.name}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || !file}>
-            {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Brainstorm Map"}
-          </Button>
+          <div>
+            <Button type="submit" className="w-full" disabled={isLoading || !file}>
+              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Brainstorm Map"}
+            </Button>
+            {is4Submission && (
+              <p className="text-sm text-yellow-600 mt-2">
+                You are still able to submit brainstorm map, but there will be a penalty.
+              </p>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>
