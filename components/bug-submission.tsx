@@ -122,14 +122,14 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
         .select("description, expectedDescription, expectedBehaviorImg, bugImageImg")
         .eq("stageId", stageId)
         .eq("bugNumber", bugNumber)
-        .eq("category", "Senior-HTML")
+        .eq("category", "Senior-Scratch")
         .single();
 
       if (bugError || !bugData) {
-        console.warn("Bug not found or not in Senior-HTML category:", bugError?.message);
+        console.warn("Bug not found or not in Senior-Scatch category:", bugError?.message);
         toast({
           title: "Error",
-          description: "Bug not found or does not belong to Senior-HTML category.",
+          description: "Bug not found or does not belong to Senior-Scratch category.",
           variant: "destructive",
         });
         return;
