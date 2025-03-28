@@ -9,14 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Icons } from "@/components/ui/icons";
 
 type EnhancementType = "advanced" | "basic";
 
 export function EnhancementSubmission() {
-  const [enhancementType, setEnhancementType] = useState<EnhancementType>("basic");
+  const [enhancementType, setEnhancementType] =
+    useState<EnhancementType>("basic");
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [activeGrouping, setActiveGrouping] = useState<string | null>(null);
   const [is4Submission, setIs4Submission] = useState(false);
@@ -31,6 +38,9 @@ export function EnhancementSubmission() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
+
+  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
+  const MAX_FILES = 4;
 
   useEffect(() => {
     const fetchUserDataAndGrouping = async () => {
@@ -84,13 +94,53 @@ export function EnhancementSubmission() {
     if (formRef.current) formRef.current.reset();
   };
 
+  const validateFiles = (files: File[]): boolean => {
+    if (files.length > MAX_FILES) {
+      toast({
+        title: "Validation Error",
+        description: `Maximum of ${MAX_FILES} images allowed.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "Validation Error",
+          description: `${file.name} exceeds 3MB limit.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setScreenshots((prevScreenshots) => [...prevScreenshots, ...files]);
+    if (validateFiles(files)) {
+      setScreenshots((prevScreenshots) => {
+        const newScreenshots = [...prevScreenshots, ...files];
+        if (newScreenshots.length > MAX_FILES) {
+          toast({
+            title: "Validation Error",
+            description: `Maximum of ${MAX_FILES} images allowed.`,
+            variant: "destructive",
+          });
+          return prevScreenshots;
+        }
+        return newScreenshots;
+      });
+    } else {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const removeScreenshot = (index: number) => {
-    setScreenshots((prevScreenshots) => prevScreenshots.filter((_, i) => i !== index));
+    setScreenshots((prevScreenshots) =>
+      prevScreenshots.filter((_, i) => i !== index)
+    );
   };
 
   const uploadScreenshots = async () => {
@@ -149,6 +199,11 @@ export function EnhancementSubmission() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateFiles(screenshots)) {
+      return;
+    }
+
     setIsLoading(true);
 
     const isGroupingActive = await checkGroupingStatus();
@@ -218,7 +273,9 @@ export function EnhancementSubmission() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Submit Enhancement</CardTitle>
+        <CardTitle className="text-xl font-semibold">
+          Submit Enhancement
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -245,12 +302,18 @@ export function EnhancementSubmission() {
               multiple
               required
             />
+            <p className="text-sm text-gray-500">
+              Maximum 4 images, each up to 3MB
+            </p>
             {screenshots.length > 0 && (
               <div className="mt-2">
                 <p className="text-sm text-gray-500">Selected files:</p>
                 <ul className="list-disc pl-5">
                   {screenshots.map((file, index) => (
-                    <li key={index} className="text-sm flex items-center justify-between">
+                    <li
+                      key={index}
+                      className="text-sm flex items-center justify-between"
+                    >
                       <span>{file.name}</span>
                       <Button
                         type="button"
@@ -289,11 +352,16 @@ export function EnhancementSubmission() {
           </div>
           <div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : "Submit Enhancement"}
+              {isLoading ? (
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Submit Enhancement"
+              )}
             </Button>
             {is4Submission && (
               <p className="text-sm text-yellow-600 mt-2">
-                You are still able to submit enhancement, but there will be a penalty.
+                You are still able to submit enhancement, but there will be a
+                penalty.
               </p>
             )}
           </div>
