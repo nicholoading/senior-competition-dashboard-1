@@ -22,6 +22,7 @@ export function ProjectSubmission() {
   const { toast } = useToast();
 
   const STORAGE_BASE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
   useEffect(() => {
     const fetchUserDataAndGrouping = async () => {
@@ -94,17 +95,37 @@ export function ProjectSubmission() {
     if (formRef.current) formRef.current.reset();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (file && file.name.endsWith(".sb3")) {
-      setScratchFile(file);
-    } else {
+  const validateFile = (file: File | null): boolean => {
+    if (!file) return false;
+
+    if (!file.name.endsWith(".sb3")) {
       toast({
         title: "Invalid File",
         description: "Please upload a valid .sb3 file.",
         variant: "destructive",
       });
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File Too Large",
+        description: "File size exceeds 50MB limit.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file && validateFile(file)) {
+      setScratchFile(file);
+    } else {
       setScratchFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -167,6 +188,16 @@ export function ProjectSubmission() {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!scratchFile || !validateFile(scratchFile)) {
+      toast({
+        title: "Submission Failed",
+        description: "Please select a valid .sb3 file under 50MB.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const isGroupingActive = await checkGroupingStatus();
     if (!isGroupingActive) {
       toast({
@@ -190,16 +221,6 @@ export function ProjectSubmission() {
       return;
     }
 
-    if (!scratchFile) {
-      toast({
-        title: "Submission Failed",
-        description: "Please select a .sb3 file to upload.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const projectLink = await uploadScratchFile();
       if (!projectLink) {
@@ -213,7 +234,7 @@ export function ProjectSubmission() {
           projectLink,
           stage: activeGrouping,
           createdAt: new Date().toISOString(),
-          penalty: is4Submission, // Set penalty based on is4Submission
+          penalty: is4Submission,
         },
       ]);
 
@@ -255,6 +276,9 @@ export function ProjectSubmission() {
               ref={fileInputRef}
               required
             />
+            <p className="text-sm text-gray-500">
+              Maximum file size: 50MB
+            </p>
             {scratchFile && (
               <p className="text-sm text-gray-500">Selected file: {scratchFile.name}</p>
             )}
