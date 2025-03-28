@@ -35,6 +35,9 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
   const { toast } = useToast();
 
   const STORAGE_BASE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
+  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
+  const MAX_FILES = 4;
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -153,9 +156,47 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
     if (formRef.current) formRef.current.reset();
   };
 
+  const validateFiles = (files: File[]): boolean => {
+    if (files.length > MAX_FILES) {
+      toast({
+        title: "Validation Error",
+        description: `Maximum of ${MAX_FILES} images allowed.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "Validation Error",
+          description: `${file.name} exceeds 3MB limit.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setScreenshots((prevScreenshots) => [...prevScreenshots, ...files]);
+    if (validateFiles(files)) {
+      setScreenshots((prevScreenshots) => {
+        const newScreenshots = [...prevScreenshots, ...files];
+        if (newScreenshots.length > MAX_FILES) {
+          toast({
+            title: "Validation Error",
+            description: `Maximum of ${MAX_FILES} images allowed.`,
+            variant: "destructive",
+          });
+          return prevScreenshots;
+        }
+        return newScreenshots;
+      });
+    } else {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const removeScreenshot = (index: number) => {
@@ -218,6 +259,12 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+        
+    if (!validateFiles(screenshots)) {
+      return;
+    }
+    
     setIsLoading(true);
 
     const isGroupingActive = await checkGroupingStatus();
@@ -360,6 +407,9 @@ export function BugSubmission({ bugNumber }: { bugNumber: number }) {
                 multiple
                 required
               />
+              <p className="text-sm text-gray-500">
+                Maximum 4 images, each up to 3MB
+              </p>
               {screenshots.length > 0 && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-500">Selected files:</p>
