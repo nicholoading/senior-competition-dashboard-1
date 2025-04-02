@@ -1,9 +1,9 @@
+// dashboard/layout.tsx
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getAuthenticatedUser, getUserTeam } from "@/lib/authHelpers";
 import { fetchUserTeamData } from "@/lib/authHelpers";
@@ -24,12 +24,14 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AdSlideshow } from "@/components/ad";
+import { DashboardContent } from "@/components/dashboard-content";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
   const router = useRouter();
+  const pathname = usePathname(); // Get the current route
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -38,7 +40,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const checkAuthAndAccess = async () => {
-      // Check if user is signed in
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
@@ -48,7 +49,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       setIsSignedIn(true);
 
-      // If signed in, proceed with original access check logic
       const email = await getAuthenticatedUser();
       if (!email) {
         setIsAllowed(false);
@@ -74,7 +74,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     checkAuthAndAccess();
   }, []);
 
-  // If authentication state is not yet determined, show a loading state
   if (isSignedIn === null) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -83,7 +82,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // If not signed in, show "Not Signed In" page
   if (!isSignedIn) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-gray-100 p-6">
@@ -101,7 +99,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // If signed in, proceed with dashboard layout
+  const isDashboardRoot = pathname === "/dashboard"; // Check if we're on the root dashboard
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -123,16 +122,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar onSignOut={handleSignOut} />
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <div className="mb-6">
-          <AdSlideshow />
-        </div>
+        <AdSlideshow /> {/* Always show the slideshow */}
         <div className="container mx-auto py-6 px-4 lg:px-8 pt-16 lg:pt-6">
-          {isAllowed === null ? (
+          {isDashboardRoot ? (
+            // Show DashboardContent on /dashboard regardless of isAllowed
+            <DashboardContent />
+          ) : isAllowed === null ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-lg text-gray-600">Checking access...</p>
             </div>
           ) : isAllowed ? (
-            children
+            children // Show children for other routes if allowed
           ) : (
             <div className="flex flex-col items-center justify-center p-6">
               <h1 className="text-center text-2xl font-bold text-gray-800 mb-4">
@@ -152,6 +152,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
 }
 
+// Rest of the code (Sidebar, NavItem, UserProfile, CountdownClock) remains unchanged
 const CountdownClock = dynamic(
   () =>
     import("@/components/countdown-clock").then((mod) => mod.CountdownClock),
@@ -308,10 +309,12 @@ function NavItem({
   href,
   icon: Icon,
   children,
+  className,
 }: {
   href: string;
   icon?: React.ElementType;
   children: React.ReactNode;
+  className?: string;
 }) {
   const pathname = usePathname();
   return (
@@ -321,7 +324,8 @@ function NavItem({
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         pathname === href
           ? "bg-gray-200 text-gray-900"
-          : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+          : "text-gray-700 hover:bg-gray-200 hover:text-gray-900",
+        className
       )}
     >
       {Icon && <Icon className="h-4 w-4" />}
