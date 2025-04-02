@@ -23,6 +23,7 @@ import {
   Clock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { AdSlideshow } from "@/components/ad";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,7 +39,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuthAndAccess = async () => {
       // Check if user is signed in
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
         setIsSignedIn(false);
         return;
@@ -121,6 +123,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar onSignOut={handleSignOut} />
       </aside>
       <main className="flex-1 overflow-y-auto">
+        <div className="mb-6">
+          <AdSlideshow />
+        </div>
         <div className="container mx-auto py-6 px-4 lg:px-8 pt-16 lg:pt-6">
           {isAllowed === null ? (
             <div className="flex h-full items-center justify-center">
@@ -184,7 +189,10 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
           })),
         },
         { href: "/dashboard/submission/enhancement", label: "Enhancement" },
-        { href: "/dashboard/submission/brainstorm-map", label: "Brainstorm Map" },
+        {
+          href: "/dashboard/submission/brainstorm-map",
+          label: "Brainstorm Map",
+        },
         { href: "/dashboard/submission/presentation", label: "Presentation" },
         { href: "/dashboard/submission/project", label: "Project Files" },
       ],
@@ -195,7 +203,10 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 font-semibold"
+        >
           <span className="text-lg">{teamName}</span>
         </Link>
       </div>
@@ -336,7 +347,9 @@ function UserProfile({
       </Avatar>
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium truncate block">{userName}</span>
-        <span className="text-xs text-gray-500 truncate block">{userEmail || "N/A"}</span>
+        <span className="text-xs text-gray-500 truncate block">
+          {userEmail || "N/A"}
+        </span>
       </div>
       <Button
         variant="ghost"
