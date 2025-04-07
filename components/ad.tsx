@@ -1,45 +1,77 @@
-// components/ad.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export function AdSlideshow() {
-  // Array of images
-  const images = [
-    "https://www.gstatic.com/youtube/img/promos/growth/YTP_logo_social_1200x630.png?days_since_epoch=20180",
-    "https://miro.medium.com/v2/resize:fit:1200/1*rEQGD7eciTUkoaePqyqY2A.png",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png",
-    "https://miro.medium.com/v2/resize:fit:1125/1*dDNpLKu_oTLzStsDTnkJ-g.png",
-  ];
-
-  // Array of corresponding links (random example links)
-  const links = [
-    "https://youtube.com",
-    "https://stackoverflow.com",
-    "https://google.com",
-    "https://github.com",
-  ];
-
+  const [ads, setAds] = useState<{ imageUrl: string; link: string }[]>([]);
   const [currentImage, setCurrentImage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const STORAGE_BASE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/ad-images/`;
 
   useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("ads")
+          .select("image_url, link")
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const formattedAds = data.map((ad) => ({
+            imageUrl: `${STORAGE_BASE_URL}${ad.image_url}`,
+            link: ad.link,
+          }));
+          setAds(formattedAds);
+        } else {
+          setError("No ads found.");
+        }
+      } catch (err: any) {
+        setError("Failed to load ads: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAds();
+  }, []);
+
+  useEffect(() => {
+    if (ads.length === 0) return;
+
     const timer = setInterval(() => {
-      setCurrentImage((prev) => (prev + 1) % images.length);
+      setCurrentImage((prev) => (prev + 1) % ads.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [images.length]);
+  }, [ads.length]);
+
+  if (loading) {
+    return <div className="w-full h-[150px] flex items-center justify-center">Loading ads...</div>;
+  }
+
+  if (error || ads.length === 0) {
+    return (
+      <div className="w-full h-[150px] flex items-center justify-center text-gray-500">
+        {error || "No advertisements available."}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-[150px] overflow-hidden m-0 p-0">
       <a
-        href={links[currentImage]}
+        href={ads[currentImage].link}
         target="_blank"
         rel="noopener noreferrer"
         className="block w-full h-full"
       >
         <img
-          src={images[currentImage]}
+          src={ads[currentImage].imageUrl}
           alt={`Advertisement ${currentImage + 1}`}
           className="w-full h-full object-cover transition-all duration-500 ease-in-out"
         />
