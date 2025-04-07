@@ -51,19 +51,19 @@ export function AdSlideshow() {
   }, [ads.length]);
 
   if (loading) {
-    return <div className="w-full h-[150px] flex items-center justify-center">Loading ads...</div>;
+    return <div className="w-[728px] h-[90px] flex items-center justify-center">Loading ads...</div>;
   }
 
   if (error || ads.length === 0) {
     return (
-      <div className="w-full h-[150px] flex items-center justify-center text-gray-500">
+      <div className="w-[728px] h-[90px] flex items-center justify-center text-gray-500">
         {error || "No advertisements available."}
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[150px] overflow-hidden m-0 p-0">
+    <div className="w-[728px] h-[90px] overflow-hidden m-0 p-0">
       <a
         href={ads[currentImage].link}
         target="_blank"

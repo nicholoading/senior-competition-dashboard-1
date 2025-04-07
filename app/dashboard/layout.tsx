@@ -122,7 +122,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar onSignOut={handleSignOut} />
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <AdSlideshow /> {/* Always show the slideshow */}
+        <div className="flex justify-center items-center">
+          <AdSlideshow /> {/* Always show the slideshow */}
+        </div>
         <div className="container mx-auto py-6 px-4 lg:px-8 pt-16 lg:pt-6">
           {isDashboardRoot ? (
             // Show DashboardContent on /dashboard regardless of isAllowed
